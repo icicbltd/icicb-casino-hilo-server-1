@@ -140,6 +140,8 @@ module.exports = {
         try {
             const { token, betValue } = req.body;
 
+            console.log("BetBalance: ", betValue);
+
             let user = usersPoints[token];
             if (user === undefined) {
                 usersPoints[token] = {
@@ -157,18 +159,26 @@ module.exports = {
 
             await CreateRandomNumber(user);
 
-            await axios.post(process.env.PLATFORM_SERVER + "api/games/bet", {
-                token: token,
-                amount: user.betBalance,
-            });
+            try {
+                await axios.post(
+                    process.env.PLATFORM_SERVER + "api/games/bet",
+                    {
+                        token: token,
+                        amount: user.betBalance,
+                    }
+                );
+            } catch (err) {
+                console.log(err);
+                throw new Error(err);
+            }
 
             res.json({
                 status: true,
-                cardNum: user.newCardNum,
+                cardNum: Number(user.newCardNum).toFixed(0),
                 colorNum: user.newColorNum,
             });
         } catch (err) {
-            console.log(err);
+            console.log(err.message);
             res.json({
                 status: false,
             });
@@ -178,6 +188,8 @@ module.exports = {
         try {
             const { token, betPosition } = req.body;
 
+            console.log("Token: ", token, "\n", "BetPosition: ", betPosition);
+
             let user = usersPoints[token];
             user.betPosition = betPosition;
 
@@ -185,14 +197,18 @@ module.exports = {
             await CalcResult(user);
 
             if (user.totalMoney === 0) {
-                await axios.post(
-                    process.env.PLATFORM_SERVER + "api/games/winlose",
-                    {
-                        token: token,
-                        amount: 0,
-                        winState: false,
-                    }
-                );
+                try {
+                    await axios.post(
+                        process.env.PLATFORM_SERVER + "api/games/winlose",
+                        {
+                            token: token,
+                            amount: 0,
+                            winState: false,
+                        }
+                    );
+                } catch (err) {
+                    throw new Error(err);
+                }
                 user.betBalance = 0;
 
                 res.json({
@@ -215,7 +231,7 @@ module.exports = {
 
             user.totalMoney = 0;
         } catch (err) {
-            console.log(err);
+            console.log(err.message);
             res.json({
                 status: false,
             });
@@ -227,14 +243,20 @@ module.exports = {
 
             let user = usersPoints[token];
 
-            await axios.post(
-                process.env.PLATFORM_SERVER + "api/games/winlose",
-                {
-                    token: token,
-                    amount: user.betBalance,
-                    winState: true,
-                }
-            );
+            try {
+                await axios.post(
+                    process.env.PLATFORM_SERVER + "api/games/winlose",
+                    {
+                        token: token,
+                        amount: user.betBalance,
+                        winState: true,
+                    }
+                );
+            } catch (err) {
+                throw new Error(err);
+            }
+
+            console.log("Token: ", token, "\n", "CashOut: ", user.betBalance);
 
             res.json({
                 status: true,
@@ -244,7 +266,7 @@ module.exports = {
             user.betBalance = 0;
             user.totalMoney = 0;
         } catch (err) {
-            console.log(err);
+            console.log(err.message);
             res.json({
                 status: false,
             });
